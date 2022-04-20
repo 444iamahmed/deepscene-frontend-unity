@@ -35,7 +35,9 @@ public class JsonHelper
 {
     public static T[] getJsonArray<T>(string json)
     {
-        string newJson = "{ \"array\": " + json + "}";
+        string newJson = json;
+        if (!json.Contains("array"))
+            newJson = "{ \"array\": " + json + "}";
         Wrapper<T> wrapper = JsonUtility.FromJson<Wrapper<T>>(newJson);
         return wrapper.array;
     }

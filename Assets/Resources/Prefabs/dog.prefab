@@ -11,6 +11,8 @@ GameObject:
   - component: {fileID: 186101524212839693}
   - component: {fileID: 4756813088710035812}
   - component: {fileID: 7662376895826142044}
+  - component: {fileID: 8231868480752986970}
+  - component: {fileID: 2227206645251256932}
   m_Layer: 0
   m_Name: Geo_Beagle
   m_TagString: Untagged
@@ -81,6 +83,32 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &8231868480752986970
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 938166001857218017}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bbbeabc7fd4e3e468cceeeb3344f4b9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  dragPlaneTarget: {fileID: 0}
+--- !u!65 &2227206645251256932
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 938166001857218017}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Size: {x: 30.17908, y: 78.25772, z: 102.21055}
+  m_Center: {x: 0, y: -1.5413227, z: -0.5362778}
 --- !u!1 &1754989121759524311
 GameObject:
   m_ObjectHideFlags: 0
@@ -90,6 +118,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1373925413198688109}
+  - component: {fileID: 7965918462367737695}
   m_Layer: 0
   m_Name: dog
   m_TagString: Untagged
@@ -112,3 +141,21 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7965918462367737695
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1754989121759524311}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5fea29bb7c508c244a1f805a5fd3fc4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  outlineMode: 0
+  outlineColor: {r: 1, g: 1, b: 1, a: 1}
+  outlineWidth: 4
+  precomputeOutline: 0
+  bakeKeys: []
+  bakeValues: []

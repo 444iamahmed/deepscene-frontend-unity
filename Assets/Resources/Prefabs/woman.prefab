@@ -885,7 +885,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &7430366996540684852
 Transform:
   m_ObjectHideFlags: 0
@@ -1038,6 +1038,8 @@ GameObject:
   m_Component:
   - component: {fileID: 3101666583252579411}
   - component: {fileID: 4526968524028070255}
+  - component: {fileID: 898700843406085171}
+  - component: {fileID: 3489457441936906423}
   m_Layer: 0
   m_Name: Female
   m_TagString: Untagged
@@ -1149,6 +1151,32 @@ SkinnedMeshRenderer:
     m_Center: {x: 0.0001408835, y: 0.022706779, z: 0.0007487503}
     m_Extent: {x: 0.009104257, y: 0.023701096, z: 0.0057963757}
   m_DirtyAABB: 0
+--- !u!114 &898700843406085171
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7323462934909481070}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4bbbeabc7fd4e3e468cceeeb3344f4b9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  dragPlaneTarget: {fileID: 0}
+--- !u!65 &3489457441936906423
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7323462934909481070}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Size: {x: 0.01820852, y: 0.011592763, z: 0.04740218}
+  m_Center: {x: 0.00017283775, y: -0.0007459586, z: 0.022647921}
 --- !u!1 &7441779014751617115
 GameObject:
   m_ObjectHideFlags: 0
@@ -1249,6 +1277,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8808142619771387055}
+  - component: {fileID: -3416526288730777059}
   m_Layer: 0
   m_Name: woman
   m_TagString: Untagged
@@ -1272,6 +1301,24 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &-3416526288730777059
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8176038450982807061}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5fea29bb7c508c244a1f805a5fd3fc4d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  outlineMode: 0
+  outlineColor: {r: 1, g: 1, b: 1, a: 1}
+  outlineWidth: 4
+  precomputeOutline: 0
+  bakeKeys: []
+  bakeValues: []
 --- !u!1 &8190779158562898014
 GameObject:
   m_ObjectHideFlags: 0

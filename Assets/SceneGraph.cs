@@ -1,18 +1,15 @@
- using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using System;
-using QuickGraph;
+using System.Linq;
 
-
-[Serializable]
 public class SceneGraph : MonoBehaviour
 {
 
-    public List<Tuple> graph { get; set; }
+    //public List<Tuple> graph { get; set; }
+    public Dictionary<GameObject, List<Tuple>> graph;
+    public Dictionary<GameObject, List<GameObject>> undirectedGraph;
 
-
-    float directionConeSize = 90f;
+    //float directionConeSize = 90f;
 
     Vector3 secondaryDiagonalStart;
     Vector3 secondaryDiagonalEnd;
@@ -22,39 +19,81 @@ public class SceneGraph : MonoBehaviour
 
     [SerializeField] float distanceCloseRange = 30f;
     [SerializeField] float distanceFurtherRange = 100f;
-
+    [SerializeField] float distanceFarRange = 200f;
+    [SerializeField] float verticalThreshold = 50f;
+    [SerializeField] Transform reference;
 
     Dictionary<string, GameObject> objects = new Dictionary<string, GameObject>();
 
+
+
     Manager manager;
+
+
+
+    HashSet<GameObject> visited;
     void Start()
     {
-        graph = new List<Tuple>();
+        //graph = new List<Tuple>();
+        reference = GameObject.FindGameObjectWithTag("Reference").transform;
+        graph = new Dictionary<GameObject, List<Tuple>>();
+        undirectedGraph = new Dictionary<GameObject, List<GameObject>>();
         manager = GetComponent<Manager>();
     }
     public void AddTuple(Tuple tuple)
     {
-        
+
+        GameObject subGameObject; 
+        GameObject objGameObject;
+
+
         if (!objects.ContainsKey(tuple.sub))
         {
-            tuple.subGameObject = Instantiate(Resources.Load<GameObject>("Prefabs/" + tuple.sub));
-            tuple.subGameObject.transform.Rotate(0f, UnityEngine.Random.Range(0f, 360f), 0f);
-            objects.Add(tuple.sub, tuple.subGameObject);
+            tuple.subGameObject = manager.AddInstanceMapping(Instantiate(Resources.Load<GameObject>("Prefabs/" + tuple.sub)));
+            subGameObject = manager.GetGameObjectFromInstanceID(tuple.subGameObject);
+            subGameObject.transform.Rotate(0f, UnityEngine.Random.Range(0f, 360f), 0f);
+            objects.Add(tuple.sub, subGameObject);
         }
         else
-            tuple.subGameObject = objects[tuple.sub];
+        {
+            tuple.subGameObject = objects[tuple.sub].GetInstanceID();
+            subGameObject = manager.GetGameObjectFromInstanceID(tuple.subGameObject);
 
+        }
         if (!objects.ContainsKey(tuple.obj))
         {
-            tuple.objGameObject = Instantiate(Resources.Load<GameObject>("Prefabs/" + tuple.obj));
-            tuple.objGameObject.transform.Rotate(0f, UnityEngine.Random.Range(0f, 360f), 0f);
-            objects.Add(tuple.obj, tuple.subGameObject);
+            tuple.objGameObject = manager.AddInstanceMapping(Instantiate(Resources.Load<GameObject>("Prefabs/" + tuple.obj)));
+            objGameObject = manager.GetGameObjectFromInstanceID(tuple.objGameObject);
+            objGameObject.transform.Rotate(0f, UnityEngine.Random.Range(0f, 360f), 0f);
+            objects.Add(tuple.obj, objGameObject);
         }
         else
-            tuple.objGameObject = objects[tuple.obj];
+        {
+            tuple.objGameObject = objects[tuple.obj].GetInstanceID();
+            objGameObject = manager.GetGameObjectFromInstanceID(tuple.objGameObject);
 
-        graph.Add(tuple);
+        }
+        if (!graph.ContainsKey(subGameObject))
+            graph.Add(subGameObject, new List<Tuple>());
 
+        if(!undirectedGraph.ContainsKey(subGameObject))
+            undirectedGraph.Add(subGameObject, new List<GameObject>());
+
+        graph[subGameObject].Add(tuple);
+        undirectedGraph[subGameObject].Add(objGameObject);
+
+        if (!graph.ContainsKey(objGameObject))
+            graph.Add(objGameObject, new List<Tuple>());
+
+
+        if(!undirectedGraph.ContainsKey(objGameObject))
+            undirectedGraph.Add(objGameObject, new List<GameObject>());
+        undirectedGraph[objGameObject].Add(subGameObject);
+        //graph.Add(tuple);
+
+
+        Debug.Log(JsonUtility.ToJson(JsonUtility.FromJson<Tuple>(JsonUtility.ToJson(tuple))));
+        
     }
 
     public void Evaluate()
@@ -62,28 +101,33 @@ public class SceneGraph : MonoBehaviour
         ComputeDiagnoals();
 
 
-        foreach (Tuple tuple in graph)
+        foreach (KeyValuePair<GameObject, List<Tuple>> kvp in graph)
         {
-            Vector3 subToObj =  tuple.objGameObject.transform.position - tuple.subGameObject.transform.position;
-            EvaluateDirection(tuple, subToObj);
-            EvaluateDistance(tuple, subToObj);
-
+            foreach (Tuple tuple in kvp.Value)
+            {
+                Vector3 subToObj = manager.GetGameObjectFromInstanceID(tuple.objGameObject).transform.position - manager.GetGameObjectFromInstanceID(tuple.subGameObject).transform.position;
+                EvaluateDirection(tuple, subToObj);
+                EvaluateDistance(tuple, subToObj);
+            }
         }
         //Debug.Log(JsonHelper.makeJsonFromArray<Tuple>(graph.ToArray()));
         manager.Save();
     }
 
-   
+   public void TrainInstance()
+   {
+        manager.Reeval();
+   }
     void EvaluateDistance(Tuple tuple, Vector3 subToObj)
     {
         if (subToObj.magnitude < distanceCloseRange)
-            tuple.distance = Distance.CLOSE;
+            tuple.distanceTruth = Distance.CLOSE;
         else if (subToObj.magnitude >= distanceCloseRange && subToObj.magnitude < distanceFurtherRange)
-            tuple.distance = Distance.FURTHER;
+            tuple.distanceTruth = Distance.FURTHER;
         else
-            tuple.distance = Distance.FAR;
+            tuple.distanceTruth = Distance.FAR;
 
-        Debug.Log(tuple.distance);
+        Debug.Log(tuple.distanceTruth);
     }
 
     void EvaluateDirection(Tuple tuple, Vector3 subToObj)
@@ -91,29 +135,186 @@ public class SceneGraph : MonoBehaviour
         float x = (primaryDiagonalStart.z * primaryDiagonalEnd.x - primaryDiagonalStart.x * primaryDiagonalEnd.z) * (primaryDiagonalStart.z * subToObj.x - primaryDiagonalStart.x * subToObj.z);
         float y = (secondaryDiagonalStart.z * secondaryDiagonalEnd.x - secondaryDiagonalStart.x * secondaryDiagonalEnd.z) * (secondaryDiagonalStart.z * subToObj.x - secondaryDiagonalStart.x * subToObj.z);
 
-        if (x < 0 && y >= 0)
-            tuple.direction = Direction.BEHIND;
+        if (manager.GetGameObjectFromInstanceID(tuple.subGameObject).transform.position.y > manager.GetGameObjectFromInstanceID(tuple.objGameObject).transform.position.y && subToObj.magnitude > verticalThreshold)
+            tuple.directionTruth = Direction.UP;
+        else if (manager.GetGameObjectFromInstanceID(tuple.subGameObject).transform.position.y < manager.GetGameObjectFromInstanceID(tuple.objGameObject).transform.position.y && subToObj.magnitude > verticalThreshold)
+            tuple.directionTruth = Direction.DOWN;
+        else if (x < 0 && y >= 0)
+            tuple.directionTruth = Direction.BEHIND;
         else if (x >= 0 && y >= 0)
-            tuple.direction = Direction.LEFT;
+            tuple.directionTruth = Direction.LEFT;
         else if (x >= 0 && y < 0)
-            tuple.direction = Direction.FRONT;
+            tuple.directionTruth = Direction.FRONT;
         else
-            tuple.direction = Direction.RIGHT;
+            tuple.directionTruth = Direction.RIGHT;
 
-        Debug.Log(tuple.direction);
+        Debug.Log(tuple.directionTruth);
         //(primaryDiagonal.z * secondaryDiagonal.x - primaryDiagonal.x * secondaryDiagonal.z) * (primaryDiagonal.z * direction.x - primaryDiagonal.x * direction.z) < 0;
 
     }
 
     void ComputeDiagnoals()
     {
-        primaryDiagonalStart = Quaternion.AngleAxis(45, Vector3.up) * Camera.main.transform.right;
-        primaryDiagonalEnd = Quaternion.AngleAxis(-45, Vector3.up) * Camera.main.transform.right;
+        primaryDiagonalStart = Quaternion.AngleAxis(45, Vector3.up) * reference.right;
+        primaryDiagonalEnd = Quaternion.AngleAxis(-45, Vector3.up) * reference.right;
 
-        secondaryDiagonalStart = Quaternion.AngleAxis(-45, Vector3.up) * Camera.main.transform.right;
-        secondaryDiagonalEnd = Quaternion.AngleAxis(45, Vector3.up) * Camera.main.transform.right;
+        secondaryDiagonalStart = Quaternion.AngleAxis(-45, Vector3.up) * reference.right;
+        secondaryDiagonalEnd = Quaternion.AngleAxis(45, Vector3.up) * reference.right;
+    }
+
+    public void SetPredictions(Tuple tuple)
+    {
+        foreach (KeyValuePair<GameObject, List<Tuple>> kvp in graph)
+        {
+            foreach (Tuple t in kvp.Value)
+            {
+                if (manager.GetGameObjectFromInstanceID(t.subGameObject) == manager.GetGameObjectFromInstanceID(tuple.subGameObject) && manager.GetGameObjectFromInstanceID(t.objGameObject) == manager.GetGameObjectFromInstanceID(tuple.objGameObject))
+                {
+                    t.directionPrediction = tuple.directionPrediction;
+                    t.distancePrediction = tuple.distancePrediction;
+                }
+            }
+        }
+    }
+
+    public Tuple[] GetTuples()
+    {
+        List<Tuple> retTuples = new List<Tuple>();
+        foreach(List<Tuple> tuples in graph.Values)
+        {
+            retTuples.AddRange(tuples);
+        }
+
+        return retTuples.ToArray();
+    }
+    public void ApplyPredictions()
+    {
+        var components = FindComponents();
+        foreach (var component in components)
+        {
+            //Debug.Log("new component");
+            foreach(var node in component.Keys)
+            {
+                //Debug.Log(node.name);
+                if (component[node].Count <= 0)
+                {
+                    SetRandomPosition(node);
+
+                    SetRelativePositions(node, component);
+                    
+
+                }   
+            }
+            
+        }
+    }
+
+    void SetRelativePositions(GameObject child, Dictionary<GameObject, List<Tuple>> component)
+    {
+        Debug.Log("Calling");
+        foreach (var possibleParent in component.Keys)
+        {
+            //Debug.Log(child.name);
+            foreach (var t in component[possibleParent])
+                if (t.objGameObject == child.GetInstanceID())
+                {
+                    SetRelativePosition(t);
+                    SetRelativePositions(manager.GetGameObjectFromInstanceID(t.subGameObject), component);
+                }
+        }
+    }
+
+    void SetRelativePosition(Tuple tuple)
+    {
+        Ray ray = new Ray(manager.GetGameObjectFromInstanceID(tuple.objGameObject).transform.position, Vector3.zero);
+        if (tuple.directionPrediction == Direction.LEFT)
+        {
+            ray.direction = Quaternion.AngleAxis(Random.Range(-45f, 45f), Vector3.up) * -reference.right;
+        }
+        else if (tuple.directionPrediction == Direction.RIGHT)
+        {
+            ray.direction = Quaternion.AngleAxis(Random.Range(-45f, 45f), Vector3.up) * reference.right;
+        }
+        else if (tuple.directionPrediction == Direction.FRONT)
+        {
+            ray.direction = Quaternion.AngleAxis(Random.Range(-45f, 45f), Vector3.up) * -reference.forward;
+        }
+        else if (tuple.directionPrediction == Direction.BEHIND)
+        {
+            ray.direction = Quaternion.AngleAxis(Random.Range(-45f, 45f), Vector3.up) * reference.forward;
+        }
+        else if (tuple.directionPrediction == Direction.UP)
+        {
+            ray.direction = Quaternion.AngleAxis(Random.Range(-45f, 45f), Vector3.forward) * reference.up;
+        }
+        else
+            ray.direction = Quaternion.AngleAxis(-Random.Range(-45f, 45f), Vector3.forward) * -reference.up;
+
+        //Gizmos.DrawLine(ray.origin, ray.GetPoint(200f));
+
+
+        if (tuple.distancePrediction == Distance.CLOSE)
+            manager.GetGameObjectFromInstanceID(tuple.subGameObject).transform.position = ray.GetPoint(Random.Range(5f, distanceCloseRange));
+        else if (tuple.distancePrediction == Distance.FURTHER)
+            manager.GetGameObjectFromInstanceID(tuple.subGameObject).transform.position = ray.GetPoint(Random.Range(distanceCloseRange, distanceFurtherRange));
+        else
+            manager.GetGameObjectFromInstanceID(tuple.subGameObject).transform.position = ray.GetPoint(Random.Range(distanceFurtherRange, distanceFarRange));
+    }
+    void SetRandomPosition(GameObject gameObject)
+    {
+        gameObject.transform.position = Vector3.zero;
+        //RaycastHit hit;
+        //Physics.Raycast(Camera.main.ViewportPointToRay(Random.insideUnitCircle), out hit);
+        //    gameObject.transform.position = hit.point;
+    }
+    List<Dictionary<GameObject, List<Tuple>>> FindComponents()
+    {
+        visited = new HashSet<GameObject>();
+
+        List<Dictionary<GameObject, List<Tuple>>> components = new List<Dictionary<GameObject, List<Tuple>>>();
+
+        foreach (GameObject node in undirectedGraph.Keys)
+        {
+            if (!visited.Contains(node))
+            {
+                components.Add(new Dictionary<GameObject, List<Tuple>>());
+                FindComponentsUtil(node, components.Last());
+            }
+        }
+
+        foreach (Dictionary<GameObject, List<Tuple>> component in components)
+        {
+            Debug.Log("new component");
+            foreach (GameObject node in component.Keys)
+                Debug.Log(node.name);
+        }
+        return components; 
+    }
+    void FindComponentsUtil(GameObject node, Dictionary<GameObject, List<Tuple>> component)
+    {
+        if(visited == null)
+            visited = new HashSet<GameObject> ();
+
+        visited.Add(node);
+
+        if (undirectedGraph.ContainsKey(node))
+        {
+            component.Add(node, graph[node]);
+            foreach (GameObject neighbour in undirectedGraph[node])
+            {
+                if (!visited.Contains(neighbour)) 
+                    FindComponentsUtil(neighbour, component);
+            }
+        }
+
+    }
+    private void Update()
+    {
+        
     }
 }
+
+
 
 //expected format
 //{

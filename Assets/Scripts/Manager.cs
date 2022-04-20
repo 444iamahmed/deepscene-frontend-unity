@@ -3,23 +3,28 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 using System.Text;
+using TMPro;
 
 public class Manager : MonoBehaviour
 {
 
-    public string inputText;
+
+    TMP_InputField inputField;
 
     public string server = "http://localhost:9001";
 
     [SerializeField] string tagSpeechCall;
     [SerializeField] string tuplesCall;
     [SerializeField] string saveTuplesCall;
+    [SerializeField] string reevalCall;
 
     SceneGraph graph;
+
+    Dictionary<int, GameObject> instanceMappings = new Dictionary<int, GameObject> ();
     // Start is called before the first frame update
     void Start()
     {
-        StartCoroutine(GetTuples());
+        inputField = GameObject.FindGameObjectWithTag("SceneDescription").GetComponent<TMP_InputField>();
         StartCoroutine(GetTags());
         graph = FindObjectOfType<SceneGraph>();
     }
@@ -34,6 +39,11 @@ public class Manager : MonoBehaviour
         //}
     }
 
+    public void Generate()
+    {
+        StartCoroutine(GetTuples());
+
+    }
     IEnumerator GetTags()
     {
 
@@ -45,7 +55,7 @@ public class Manager : MonoBehaviour
 
         Debug.Log(request);
         UnityWebRequest www = new UnityWebRequest(request, "POST");
-        www.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes("{ \"text\": \"" + inputText + "\" }"));
+        www.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes("{ \"text\": \"" + inputField.text + "\" }"));
         www.downloadHandler = new DownloadHandlerBuffer();
         www.SetRequestHeader("Content-Type", "application/json");
        
@@ -68,6 +78,7 @@ public class Manager : MonoBehaviour
 
     IEnumerator GetTuples()
     {
+        string inputText = inputField.text;
         inputText.Replace(" ", "%20");
         inputText.Replace(".", "%2E");
         UnityWebRequest www = UnityWebRequest.Get(server + "/" + tuplesCall + "/" + inputText);
@@ -79,6 +90,7 @@ public class Manager : MonoBehaviour
         }
         else
         {
+            
             // Show results as text
             Debug.Log(www.downloadHandler.text.ToString());
 
@@ -123,12 +135,13 @@ public class Manager : MonoBehaviour
         string request = server + "/" + saveTuplesCall + "/";
 
         Debug.Log(request);
-        string data = JsonHelper.makeJsonFromArray<Tuple>(graph.graph.ToArray());
+        string data = JsonHelper.makeJsonFromArray<Tuple>(graph.GetTuples());
+        Debug.Log(JsonHelper.getJsonArray<Tuple>(data));
         //string data = JsonUtility.ToJson(graph.graph[0]);
         //Debug.Log(data.("\""));
         //string data = "asd\"asd";
 
-
+        Debug.Log(data);
         string x = data.Replace("\"", "%22");
         //data.Replace("\"", "%22");
         Debug.Log(x);
@@ -148,11 +161,79 @@ public class Manager : MonoBehaviour
         }
         else
         {
+            string text = www.downloadHandler.text.Replace("\\\"", "\"").Trim('\"');
             // Show results as text
-            Debug.Log(www.downloadHandler.text);
+            Debug.Log(text);
+            var sss = JsonHelper.getJsonArray<Tuple>(text);
+            Debug.Log(sss);
+            //List<GameObject> objects = new List<GameObject>();
 
-            // Or retrieve results as binary data
-            byte[] results = www.downloadHandler.data;
+            foreach (Tuple tuple in sss)
+            {
+                Debug.Log(tuple.subGameObject);
+                Debug.Log(tuple.objGameObject);
+                Debug.Log(tuple.sub);
+                Debug.Log(tuple.obj);
+                Debug.Log(tuple.directionPrediction);
+                Debug.Log(tuple.distancePrediction);
+                graph.SetPredictions(tuple);
+            }
+            graph.ApplyPredictions();
         }
+
+        
+    }
+
+    public int AddInstanceMapping(GameObject gameObject)
+    {
+        instanceMappings.Add(gameObject.GetInstanceID(), gameObject);
+        return gameObject.GetInstanceID();
+    }
+
+    public GameObject GetGameObjectFromInstanceID(int instanceID)
+    {
+        return instanceMappings[instanceID];
+    }
+    public void Reeval()
+    {
+
+    }
+    IEnumerator ReevalUtility()
+    {
+        string request = server + "/" + reevalCall + "/";
+
+        Debug.Log(request);
+        string data = JsonHelper.makeJsonFromArray<Tuple>(graph.GetTuples());
+        Debug.Log(JsonHelper.getJsonArray<Tuple>(data));
+        //string data = JsonUtility.ToJson(graph.graph[0]);
+        //Debug.Log(data.("\""));
+        //string data = "asd\"asd";
+
+        Debug.Log(data);
+        string x = data.Replace("\"", "%22");
+        //data.Replace("\"", "%22");
+        Debug.Log(x);
+
+
+
+        UnityWebRequest www = new UnityWebRequest(request, "POST");
+        www.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes("{ \"text\": \"" + x + "\" }"));
+        www.downloadHandler = new DownloadHandlerBuffer();
+        www.SetRequestHeader("Content-Type", "application/json");
+
+        yield return www.SendWebRequest();
+
+        if (www.result != UnityWebRequest.Result.Success)
+        {
+            Debug.Log(www.error);
+        }
+        else
+        {
+            string text = www.downloadHandler.text.Replace("\\\"", "\"").Trim('\"');
+            // Show results as text
+            Debug.Log(text);
+            
+        }
+
     }
 }

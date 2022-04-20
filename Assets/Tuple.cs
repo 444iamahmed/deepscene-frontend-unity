@@ -18,13 +18,16 @@ public enum Direction
 [Serializable]
 public class Tuple
 {
-    public GameObject subGameObject;
-    public GameObject objGameObject;
+    public int subGameObject;
+    public int objGameObject;
     public string sub;
     public string obj;
     public string relation;
-    public Distance distance;
-    public Direction direction;
+    public Distance distancePrediction;
+    public Distance distanceTruth;
+    public Direction directionPrediction;
+    public Direction directionTruth;
+    public bool animate;
 }
 
 
