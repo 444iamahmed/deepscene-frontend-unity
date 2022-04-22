@@ -14,3 +14,5 @@
 </p>
 
 Note: This assumes you have unity installed
+
+- Simply clone repo and run on unity
