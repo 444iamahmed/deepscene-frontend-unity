@@ -1,9 +1,14 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using TMPro;
 
 public class SceneGraph : MonoBehaviour
 {
+
+
+    TMP_InputField inputField;
+
 
     //public List<Tuple> graph { get; set; }
     public Dictionary<GameObject, List<Tuple>> graph;
@@ -11,17 +16,17 @@ public class SceneGraph : MonoBehaviour
 
     //float directionConeSize = 90f;
 
-    Vector3 secondaryDiagonalStart;
-    Vector3 secondaryDiagonalEnd;
-    Vector3 primaryDiagonalStart;
-    Vector3 primaryDiagonalEnd;
+    public Vector3 secondaryDiagonalStart;
+    public Vector3 secondaryDiagonalEnd;
+    public Vector3 primaryDiagonalStart;
+    public Vector3 primaryDiagonalEnd;
 
 
-    [SerializeField] float distanceCloseRange = 30f;
-    [SerializeField] float distanceFurtherRange = 100f;
-    [SerializeField] float distanceFarRange = 200f;
-    [SerializeField] float verticalThreshold = 50f;
-    [SerializeField] Transform reference;
+    public float distanceCloseRange = 30f;
+    public float distanceFurtherRange = 100f;
+    public float distanceFarRange = 200f;
+    public float verticalThreshold = 70f;
+    public Transform reference;
 
     Dictionary<string, GameObject> objects = new Dictionary<string, GameObject>();
 
@@ -35,6 +40,7 @@ public class SceneGraph : MonoBehaviour
     void Start()
     {
         //graph = new List<Tuple>();
+
         reference = GameObject.FindGameObjectWithTag("Reference").transform;
         graph = new Dictionary<GameObject, List<Tuple>>();
         undirectedGraph = new Dictionary<GameObject, List<GameObject>>();
@@ -42,6 +48,8 @@ public class SceneGraph : MonoBehaviour
     }
     public void AddTuple(Tuple tuple)
     {
+        //bool subFlag = false;
+        //bool objFlag = false;
 
         GameObject subGameObject; 
         GameObject objGameObject;
@@ -53,6 +61,7 @@ public class SceneGraph : MonoBehaviour
             subGameObject = manager.GetGameObjectFromInstanceID(tuple.subGameObject);
             subGameObject.transform.Rotate(0f, UnityEngine.Random.Range(0f, 360f), 0f);
             objects.Add(tuple.sub, subGameObject);
+            //subFlag = true;
         }
         else
         {
@@ -66,6 +75,7 @@ public class SceneGraph : MonoBehaviour
             objGameObject = manager.GetGameObjectFromInstanceID(tuple.objGameObject);
             objGameObject.transform.Rotate(0f, UnityEngine.Random.Range(0f, 360f), 0f);
             objects.Add(tuple.obj, objGameObject);
+            //objFlag = true;
         }
         else
         {
@@ -79,8 +89,7 @@ public class SceneGraph : MonoBehaviour
         if(!undirectedGraph.ContainsKey(subGameObject))
             undirectedGraph.Add(subGameObject, new List<GameObject>());
 
-        graph[subGameObject].Add(tuple);
-        undirectedGraph[subGameObject].Add(objGameObject);
+        
 
         if (!graph.ContainsKey(objGameObject))
             graph.Add(objGameObject, new List<Tuple>());
@@ -88,8 +97,22 @@ public class SceneGraph : MonoBehaviour
 
         if(!undirectedGraph.ContainsKey(objGameObject))
             undirectedGraph.Add(objGameObject, new List<GameObject>());
-        undirectedGraph[objGameObject].Add(subGameObject);
-        //graph.Add(tuple);
+
+        bool exists = false;
+            foreach(var list in graph.Values)
+            {
+                foreach(Tuple t in list)
+                if (t.objGameObject == tuple.objGameObject && t.subGameObject == tuple.subGameObject)
+                {
+                    exists = true;
+                }
+            }
+        if (!exists)
+        {
+            graph[subGameObject].Add(tuple);
+            undirectedGraph[subGameObject].Add(objGameObject);
+            undirectedGraph[objGameObject].Add(subGameObject);
+        }//graph.Add(tuple);
 
 
         Debug.Log(JsonUtility.ToJson(JsonUtility.FromJson<Tuple>(JsonUtility.ToJson(tuple))));
@@ -127,7 +150,7 @@ public class SceneGraph : MonoBehaviour
         else
             tuple.distanceTruth = Distance.FAR;
 
-        Debug.Log(tuple.distanceTruth);
+        //Debug.Log(tuple.distanceTruth);
     }
 
     void EvaluateDirection(Tuple tuple, Vector3 subToObj)
@@ -135,31 +158,34 @@ public class SceneGraph : MonoBehaviour
         float x = (primaryDiagonalStart.z * primaryDiagonalEnd.x - primaryDiagonalStart.x * primaryDiagonalEnd.z) * (primaryDiagonalStart.z * subToObj.x - primaryDiagonalStart.x * subToObj.z);
         float y = (secondaryDiagonalStart.z * secondaryDiagonalEnd.x - secondaryDiagonalStart.x * secondaryDiagonalEnd.z) * (secondaryDiagonalStart.z * subToObj.x - secondaryDiagonalStart.x * subToObj.z);
 
+
+        Debug.Log(x);
+        Debug.Log(y);
         if (manager.GetGameObjectFromInstanceID(tuple.subGameObject).transform.position.y > manager.GetGameObjectFromInstanceID(tuple.objGameObject).transform.position.y && subToObj.magnitude > verticalThreshold)
             tuple.directionTruth = Direction.UP;
         else if (manager.GetGameObjectFromInstanceID(tuple.subGameObject).transform.position.y < manager.GetGameObjectFromInstanceID(tuple.objGameObject).transform.position.y && subToObj.magnitude > verticalThreshold)
             tuple.directionTruth = Direction.DOWN;
         else if (x < 0 && y >= 0)
-            tuple.directionTruth = Direction.BEHIND;
-        else if (x >= 0 && y >= 0)
-            tuple.directionTruth = Direction.LEFT;
-        else if (x >= 0 && y < 0)
-            tuple.directionTruth = Direction.FRONT;
-        else
             tuple.directionTruth = Direction.RIGHT;
+        else if (x >= 0 && y >= 0)
+            tuple.directionTruth = Direction.FRONT;
+        else if (x >= 0 && y < 0)
+            tuple.directionTruth = Direction.LEFT;
+        else
+            tuple.directionTruth = Direction.BEHIND;
 
         Debug.Log(tuple.directionTruth);
         //(primaryDiagonal.z * secondaryDiagonal.x - primaryDiagonal.x * secondaryDiagonal.z) * (primaryDiagonal.z * direction.x - primaryDiagonal.x * direction.z) < 0;
 
     }
 
-    void ComputeDiagnoals()
+    public void ComputeDiagnoals()
     {
         primaryDiagonalStart = Quaternion.AngleAxis(45, Vector3.up) * reference.right;
         primaryDiagonalEnd = Quaternion.AngleAxis(-45, Vector3.up) * reference.right;
 
-        secondaryDiagonalStart = Quaternion.AngleAxis(-45, Vector3.up) * reference.right;
-        secondaryDiagonalEnd = Quaternion.AngleAxis(45, Vector3.up) * reference.right;
+        secondaryDiagonalStart = Quaternion.AngleAxis(-45, Vector3.up) * -reference.right;
+        secondaryDiagonalEnd = Quaternion.AngleAxis(45, Vector3.up) * -reference.right;
     }
 
     public void SetPredictions(Tuple tuple)
@@ -189,6 +215,7 @@ public class SceneGraph : MonoBehaviour
     }
     public void ApplyPredictions()
     {
+        
         var components = FindComponents();
         foreach (var component in components)
         {
@@ -218,14 +245,31 @@ public class SceneGraph : MonoBehaviour
             foreach (var t in component[possibleParent])
                 if (t.objGameObject == child.GetInstanceID())
                 {
+                    //DummyFill(t);
                     SetRelativePosition(t);
                     SetRelativePositions(manager.GetGameObjectFromInstanceID(t.subGameObject), component);
                 }
         }
     }
 
+    void DummyFill(Tuple t)
+    {
+        t.directionPrediction = t.directionTruth;
+        t.distancePrediction = t.distanceTruth;
+        t.animate = false;
+    }
     void SetRelativePosition(Tuple tuple)
     {
+        Debug.Log(tuple.directionPrediction);
+        Debug.Log(tuple.distancePrediction);
+        if (tuple.animate)
+        {
+            Debug.Log("ANIMATING");
+            ApplyAnimation animator = manager.GetGameObjectFromInstanceID(tuple.subGameObject).GetComponent<ApplyAnimation>();
+            animator.target = manager.GetGameObjectFromInstanceID(tuple.objGameObject).transform.position;
+            
+            animator.apply = true;
+        }
         Ray ray = new Ray(manager.GetGameObjectFromInstanceID(tuple.objGameObject).transform.position, Vector3.zero);
         if (tuple.directionPrediction == Direction.LEFT)
         {

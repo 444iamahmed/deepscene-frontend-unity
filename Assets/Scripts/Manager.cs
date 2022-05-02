@@ -2,12 +2,15 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.SceneManagement;
 using System.Text;
 using TMPro;
+using Newtonsoft.Json;
 
 public class Manager : MonoBehaviour
 {
 
+    
 
     TMP_InputField inputField;
 
@@ -17,6 +20,7 @@ public class Manager : MonoBehaviour
     [SerializeField] string tuplesCall;
     [SerializeField] string saveTuplesCall;
     [SerializeField] string reevalCall;
+    [SerializeField] string predictCall;
 
     SceneGraph graph;
 
@@ -41,7 +45,52 @@ public class Manager : MonoBehaviour
 
     public void Generate()
     {
-        StartCoroutine(GetTuples());
+        //StartCoroutine(GetTuples());
+        StartCoroutine(Predict());
+
+    }
+
+    IEnumerator Predict()
+    {
+        string request = server + "/" + predictCall + "/";
+
+        Debug.Log(request);
+        UnityWebRequest www = new UnityWebRequest(request, "POST");
+        www.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes("{ \"text\": \"" + inputField.text + "\" }"));
+        www.downloadHandler = new DownloadHandlerBuffer();
+        www.SetRequestHeader("Content-Type", "application/json");
+
+        yield return www.SendWebRequest();
+
+        if (www.result != UnityWebRequest.Result.Success)
+        {
+            Debug.Log(www.error);
+        }
+        else
+        {
+            // Show results as text
+            Debug.Log(www.downloadHandler.text);
+
+            var x = www.downloadHandler.text;
+            x = x.Trim('\"');
+            x = x.Replace("\\\"", "\"");
+
+
+            var y = JsonConvert.DeserializeObject<List<Tuple>>(x);
+
+            Debug.Log(y[0].sub);
+            Debug.Log(y[0].obj);
+            Debug.Log(y[0].relation);
+            Debug.Log(y[0].relation);
+            Debug.Log(y[0].directionPrediction);
+
+            // Or retrieve results as binary data
+            foreach (Tuple tuple in y)
+            {
+                graph.AddTuple(tuple);
+            }
+            graph.ApplyPredictions();
+        }
 
     }
     IEnumerator GetTags()
@@ -70,6 +119,7 @@ public class Manager : MonoBehaviour
             // Show results as text
             Debug.Log(www.downloadHandler.text);
 
+
             // Or retrieve results as binary data
             byte[] results = www.downloadHandler.data;
         }
@@ -79,8 +129,7 @@ public class Manager : MonoBehaviour
     IEnumerator GetTuples()
     {
         string inputText = inputField.text;
-        inputText.Replace(" ", "%20");
-        inputText.Replace(".", "%2E");
+        
         UnityWebRequest www = UnityWebRequest.Get(server + "/" + tuplesCall + "/" + inputText);
         yield return www.SendWebRequest();
 
@@ -94,9 +143,15 @@ public class Manager : MonoBehaviour
             // Show results as text
             Debug.Log(www.downloadHandler.text.ToString());
 
-            //List<GameObject> objects = new List<GameObject>();
+            var x = www.downloadHandler.text;
+            x = x.Trim('\"');
+            x = x.Replace("\\\"", "\"");
 
-            foreach (Tuple tuple in JsonHelper.getJsonArray<Tuple>(www.downloadHandler.text))
+
+            var y = JsonConvert.DeserializeObject<List<Tuple>>(x);
+            //List<GameObject> objects = new List<GameObject>();   
+
+            foreach (Tuple tuple in y)
             {
                 graph.AddTuple(tuple);
             }
@@ -135,8 +190,8 @@ public class Manager : MonoBehaviour
         string request = server + "/" + saveTuplesCall + "/";
 
         Debug.Log(request);
-        string data = JsonHelper.makeJsonFromArray<Tuple>(graph.GetTuples());
-        Debug.Log(JsonHelper.getJsonArray<Tuple>(data));
+        string data = JsonConvert.SerializeObject(new List<Tuple>(graph.GetTuples()));
+        Debug.Log(JsonConvert.DeserializeObject<List<Tuple>>(data));
         //string data = JsonUtility.ToJson(graph.graph[0]);
         //Debug.Log(data.("\""));
         //string data = "asd\"asd";
@@ -161,14 +216,15 @@ public class Manager : MonoBehaviour
         }
         else
         {
-            string text = www.downloadHandler.text.Replace("\\\"", "\"").Trim('\"');
-            // Show results as text
-            Debug.Log(text);
-            var sss = JsonHelper.getJsonArray<Tuple>(text);
-            Debug.Log(sss);
-            //List<GameObject> objects = new List<GameObject>();
+            var json = www.downloadHandler.text;
+            json = json.Trim('\"');
+            json = json.Replace("\\\"", "\"");
 
-            foreach (Tuple tuple in sss)
+
+            var tupleList = JsonConvert.DeserializeObject<List<Tuple>>(json);
+            List<GameObject> objects = new List<GameObject>();
+
+            foreach (Tuple tuple in tupleList)
             {
                 Debug.Log(tuple.subGameObject);
                 Debug.Log(tuple.objGameObject);
@@ -203,8 +259,8 @@ public class Manager : MonoBehaviour
         string request = server + "/" + reevalCall + "/";
 
         Debug.Log(request);
-        string data = JsonHelper.makeJsonFromArray<Tuple>(graph.GetTuples());
-        Debug.Log(JsonHelper.getJsonArray<Tuple>(data));
+        string data = JsonConvert.SerializeObject(new List<Tuple>(graph.GetTuples()));
+        Debug.Log(JsonConvert.DeserializeObject<List<Tuple>>(data));
         //string data = JsonUtility.ToJson(graph.graph[0]);
         //Debug.Log(data.("\""));
         //string data = "asd\"asd";
@@ -235,5 +291,10 @@ public class Manager : MonoBehaviour
             
         }
 
+    }
+
+    public void ResetScene()
+    {
+        Scene scene = SceneManager.GetActiveScene(); SceneManager.LoadScene(scene.name);
     }
 }

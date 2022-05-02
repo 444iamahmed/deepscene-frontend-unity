@@ -28,6 +28,9 @@ public class Tuple
     public Direction directionPrediction;
     public Direction directionTruth;
     public bool animate;
+
+
+    
 }
 
 

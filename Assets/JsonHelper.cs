@@ -2,6 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using Newtonsoft.Json;
+
 //public static class JsonHelper
 //{
 //    public static T[] FromJson<T>(string json)
@@ -31,6 +33,35 @@ using System;
 //    }
 //}
 
+//public class JsonHelper
+//{
+//    public static T[] getJsonArray<T>(string json)
+//    {
+//        string newJson = json;
+//        if (!json.Contains("array"))
+//            newJson = "{ \"array\": " + json + "}";
+//        newJson = newJson.Replace("\\\"", "\"");
+//        Debug.Log(newJson);
+
+//        Wrapper<T> wrapper = JsonUtility.FromJson<Wrapper<T>>(newJson);
+//        return wrapper.array;
+//    }
+
+//    public static string makeJsonFromArray<T>(T[] data)
+//    {
+//        Wrapper<T> wrapper = new Wrapper<T>();
+//        wrapper.array = data;
+//        return JsonUtility.ToJson(wrapper);
+//    }
+
+//    [System.Serializable]
+//    private class Wrapper<T>
+//    {
+//        public T[] array;
+//    }
+//}
+
+
 public class JsonHelper
 {
     public static T[] getJsonArray<T>(string json)
@@ -38,7 +69,10 @@ public class JsonHelper
         string newJson = json;
         if (!json.Contains("array"))
             newJson = "{ \"array\": " + json + "}";
-        Wrapper<T> wrapper = JsonUtility.FromJson<Wrapper<T>>(newJson);
+        newJson = newJson.Replace("\\\"", "\"");
+        Debug.Log(newJson);
+
+        Wrapper<T> wrapper = JsonConvert.DeserializeObject<Wrapper<T>>(newJson);
         return wrapper.array;
     }
 
@@ -46,7 +80,7 @@ public class JsonHelper
     {
         Wrapper<T> wrapper = new Wrapper<T>();
         wrapper.array = data;
-        return JsonUtility.ToJson(wrapper);
+        return JsonConvert.SerializeObject(wrapper);
     }
 
     [System.Serializable]
