@@ -54,6 +54,7 @@ public class SceneGraph : MonoBehaviour
         GameObject subGameObject; 
         GameObject objGameObject;
 
+        
 
         if (!objects.ContainsKey(tuple.sub))
         {
@@ -105,6 +106,7 @@ public class SceneGraph : MonoBehaviour
                 if (t.objGameObject == tuple.objGameObject && t.subGameObject == tuple.subGameObject)
                 {
                     exists = true;
+                    t.relation = tuple.relation;
                 }
             }
         if (!exists)
@@ -114,7 +116,7 @@ public class SceneGraph : MonoBehaviour
             undirectedGraph[objGameObject].Add(subGameObject);
         }//graph.Add(tuple);
 
-
+        
         Debug.Log(JsonUtility.ToJson(JsonUtility.FromJson<Tuple>(JsonUtility.ToJson(tuple))));
         
     }

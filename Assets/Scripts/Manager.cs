@@ -234,7 +234,7 @@ public class Manager : MonoBehaviour
                 Debug.Log(tuple.distancePrediction);
                 graph.SetPredictions(tuple);
             }
-            graph.ApplyPredictions();
+            //graph.ApplyPredictions();
         }
 
         
